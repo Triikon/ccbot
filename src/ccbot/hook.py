@@ -12,7 +12,16 @@ Key functions: hook_main() (CLI entry), _install_hook().
 """
 
 import argparse
-import fcntl
+try:
+    import fcntl  # Unix only; Windows uses a no-op stub below.
+except ImportError:
+    class _FcntlStub:
+        LOCK_EX = 0
+        LOCK_UN = 0
+        @staticmethod
+        def flock(*_args, **_kwargs) -> None:
+            return None
+    fcntl = _FcntlStub()  # type: ignore[assignment]
 import json
 import logging
 import os
@@ -193,20 +202,27 @@ def hook_main() -> None:
         logger.warning("TMUX_PANE not set, cannot determine window")
         return
 
+    # `display-message -t <pane>` would be more direct, but psmux (the
+    # Windows-native tmux clone) ignores the -t target and returns info
+    # about the active window. `list-panes -a -F` reports each pane's
+    # actual containing window correctly on both implementations.
     result = subprocess.run(
         [
             "tmux",
-            "display-message",
-            "-t",
-            pane_id,
-            "-p",
-            "#{session_name}:#{window_id}:#{window_name}",
+            "list-panes",
+            "-a",
+            "-F",
+            "#{pane_id}|#{session_name}:#{window_id}:#{window_name}",
         ],
         capture_output=True,
         text=True,
     )
-    raw_output = result.stdout.strip()
-    # Expected format: "session_name:@id:window_name"
+    raw_output = ""
+    prefix = pane_id + "|"
+    for line in result.stdout.splitlines():
+        if line.startswith(prefix):
+            raw_output = line[len(prefix):]
+            break
     parts = raw_output.split(":", 2)
     if len(parts) < 3:
         logger.warning(
