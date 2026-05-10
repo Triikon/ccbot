@@ -41,6 +41,10 @@ In fact, CCBot itself was built this way — iterating on itself through Claude 
 - **tmux** — must be installed and available in PATH
 - **Claude Code** — the CLI tool (`claude`) must be installed
 
+> **Windows users:** see [`docs/windows-setup.md`](docs/windows-setup.md) for
+> the Windows-specific install path using [psmux](https://github.com/psmux/psmux)
+> instead of tmux, plus the Scheduled Task pattern for running ccbot at logon.
+
 ## Installation
 
 ### Option 1: Install from GitHub (Recommended)
